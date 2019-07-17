@@ -6,23 +6,28 @@ import torch
 import torch.nn as nn
 from torch import from_numpy
 from torch.utils.data import DataLoader
-
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.morphology import dilation, square
 from scipy.interpolate import interp1d
-
 import astroscrappy.astroscrappy as lac
 from deepCR import deepCR
-
 from util import ROC_LACosmic, ROC_DAE, maskMetric
 from data import data
 dtype = torch.cuda.FloatTensor # GPU training
 
+print('Creating Figure 3: ROC curves')
+
+# load test data
 filename = 'data/ACS-WFC-F606W-test.pkl'
-dset_test_EX = data(filename, field='EX')
+dset_test_EX = data(filename, field=['EX','GC'])
 dset_test_GAL = data(filename, field='GAL')
 
+# first calculate ROC curves for LACosmic
+# to save time, we saved calculated
+# LACosmic ROC curves in LAC.npy
+# if LAC.npy doesn't exist we will calculate again
+# variables ending in _3 are with rad-3 square dilation
 if os.path.isfile('LAC.npy'):
     save = np.load('LAC.npy')
     TPR_EX_LAC = save[0]
@@ -33,7 +38,7 @@ if os.path.isfile('LAC.npy'):
     FPR_GAL_LAC = save[5]
     TPR_GAL_LAC_3 = save[6]
     FPR_GAL_LAC_3 = save[7]
-    print('loaded')
+    print('LACosmic ROC curves from LAC.npy ')
 else:
     (TPR_EX_LAC, FPR_EX_LAC),(TPR_EX_LAC_3, FPR_EX_LAC_3) = ROC_LACosmic(dset_test_EX, np.linspace(3,30,100), 2.6, limit=320, dilate=square(3))
     (TPR_GAL_LAC, FPR_GAL_LAC), (TPR_GAL_LAC_3, FPR_GAL_LAC_3) = ROC_LACosmic(dset_test_GAL, np.linspace(6,60,100), 4.5, limit=320, dilate=square(3))
@@ -42,18 +47,19 @@ else:
         save.append(i)
     np.save('LAC.npy', np.array(save))
 
-model = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
-(TPR_EX, FPR_EX), (TPR_EX_3, FPR_EX_3) = ROC_DAE(model, dset_test_EX, np.linspace(0.001,0.999,100), 320,  dilate=square(3))
-(TPR_GAL, FPR_GAL), (TPR_GAL_3 , FPR_GAL_3) = ROC_DAE(model, dset_test_GAL, np.linspace(0.01,0.99,100), 320, dilate=square(3))
-model = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
-(TPR_EX4, FPR_EX4), (TPR_EX4_3, FPR_EX4_3) = ROC_DAE(model, dset_test_EX, np.linspace(0.001,0.999,100), 20,  dilate=square(3))
-(TPR_GAL4, FPR_GAL4), (TPR_GAL4_3 , FPR_GAL4_3) = ROC_DAE(model, dset_test_GAL, np.linspace(0.01,0.99,100), 20, dilate=square(3))
+# calculate ROC curves for two variants of deepCR-mask
+deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
+(TPR_EX, FPR_EX), (TPR_EX_3, FPR_EX_3) = ROC_DAE(deepCR_2_32, dset_test_EX, np.linspace(0.001,0.999,100), 320,  dilate=square(3))
+(TPR_GAL, FPR_GAL), (TPR_GAL_3 , FPR_GAL_3) = ROC_DAE(deepCR_2_32, dset_test_GAL, np.linspace(0.01,0.99,100), 320, dilate=square(3))
+deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
+(TPR_EX4, FPR_EX4), (TPR_EX4_3, FPR_EX4_3) = ROC_DAE(deepCR_2_4, dset_test_EX, np.linspace(0.001,0.999,100), 20,  dilate=square(3))
+(TPR_GAL4, FPR_GAL4), (TPR_GAL4_3 , FPR_GAL4_3) = ROC_DAE(deepCR_2_4, dset_test_GAL, np.linspace(0.01,0.99,100), 20, dilate=square(3))
 
+# generate figure 3
 plt.figure(figsize=(8,4))
 plt.subplot(121)
 plt.plot(FPR_EX, TPR_EX_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
 plt.plot(FPR_EX_LAC, TPR_EX_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-
 plt.plot(FPR_EX, TPR_EX, 'k-', label='deepCR-2-32', linewidth=1)
 plt.plot(FPR_EX_LAC, TPR_EX_LAC, 'k-.', label='LACosmic', linewidth=1)
 
@@ -64,11 +70,9 @@ plt.xlabel('false positive rate [%]', fontsize=12)
 plt.ylabel('true positive rate [%]', fontsize=12)
 plt.title('sparse-exgal', fontsize=12)
 
-
 plt.subplot(122)
 plt.plot(FPR_GAL, TPR_GAL_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
 plt.plot(FPR_GAL_LAC, TPR_GAL_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-
 plt.plot(FPR_GAL, TPR_GAL, 'k-', label='deepCR-2-32', linewidth=1)
 plt.plot(FPR_GAL_LAC, TPR_GAL_LAC, 'k-.', label='LACosmic', linewidth=1)
 
@@ -80,9 +84,7 @@ plt.title('dense-gal', fontsize=12)
 plt.tight_layout()
 plt.savefig('figure/ROC.pdf', fmt='pdf', bbox_inches='tight')
 
-"""
-    Table 2
-"""
+# interpolate f:FPR --> TPR
 fex = interp1d(FPR_EX,TPR_EX)
 fex_lac = interp1d(FPR_EX_LAC,TPR_EX_LAC)
 fex3 = interp1d(FPR_EX,TPR_EX_3)
@@ -93,37 +95,37 @@ fex43 = interp1d(FPR_EX4,TPR_EX4_3)
 fgal4 = interp1d(FPR_GAL4,TPR_GAL4)
 fgal43 = interp1d(FPR_GAL4,TPR_GAL4_3)
 
-
 fgal = interp1d(FPR_GAL,TPR_GAL)
 fgal_lac = interp1d(FPR_GAL_LAC,TPR_GAL_LAC)
 fgal3 = interp1d(FPR_GAL,TPR_GAL_3)
 fgal3_lac = interp1d(FPR_GAL,TPR_GAL_LAC_3)
 
+# dummy variable to evaluate runtime on deepCR
 var = from_numpy(dset_test_EX[0][0]).type(dtype).reshape(1,1,256,256)
 varcpu = from_numpy(dset_test_EX[0][0]).type(torch.FloatTensor).reshape(1,1,256,256)
 
-model = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
+#model = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
 t0= time.time()
 for i in range(10000):
-    a=model.maskNet(var)
+    a=deepCR_2_32.maskNet(var)
 deepCR_GPU = (time.time()-t0)/100
 
-modelcpu = deepCR(mask='ACS-WFC-F606W-2-32', device='CPU')
+deepCR_2_32_cpu = deepCR(mask='ACS-WFC-F606W-2-32', device='CPU')
 t0= time.time()
 for i in range(2000):
-    a=modelcpu.maskNet(varcpu)
+    a=deepCR_2_32_cpu.maskNet(varcpu)
 deepCR_CPU = (time.time()-t0)/20
 
-model = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
+#model = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
 t0= time.time()
 for i in range(10000):
-    model.maskNet(var)
+    deepCR_2_4.maskNet(var)
 deepCR4_GPU = (time.time()-t0)/100
 
-modelcpu = deepCR(mask='ACS-WFC-F606W-2-4', device='CPU')
+deepCR_2_4_cpu = deepCR(mask='ACS-WFC-F606W-2-4', device='CPU')
 t0= time.time()
 for i in range(2000):
-    modelcpu.maskNet(varcpu)
+    deepCR_2_4_cpu.maskNet(varcpu)
 deepCR4_CPU = (time.time()-t0)/20
 
 t0= time.time()
@@ -133,6 +135,7 @@ for i in range(500):
                    sepmed=False, cleantype='medmask', niter=6)
 LACosmic_CPU = (time.time()-t0)/5
 
+# generate table2
 table2 = []
 table2.append('\\begin{table*}\n \\label{table:mask}\n \\caption{Mask prediction benchmarks. Each column shows true positive rates (TPR) at the specified false positive rates (FPR; 0.01\% and 0.1\%), for either sparse-exgal or dense-gal fields. TPR in parenthesis shows benchmark value after mask dilation, as described in the main text.}\n \\centering\n')
 table2.append('  \\begin{tabular}{l|ll|ll|ll} \n \\toprule \n          &sparse-exgal & & dense-gal& & &    \\\\\n        Model &TPR (0.02\%) & TPR (0.1\%)& TPR (0.02\%)&TPR (0.1\%)&Time (CPU) &Time (GPU)  \\\\\n \\midrule\n')

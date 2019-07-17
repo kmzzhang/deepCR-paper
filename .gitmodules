@@ -1,0 +1,3 @@
+[submodule "deepCR"]
+	path = deepCR
+	url = https://github.com/profjsb/deepCR
