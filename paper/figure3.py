@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../deepCR")
 import os
 import time
 import torch

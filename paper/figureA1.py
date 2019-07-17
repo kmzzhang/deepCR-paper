@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../deepCR")
 
 import torch
 import matplotlib.pyplot as plt

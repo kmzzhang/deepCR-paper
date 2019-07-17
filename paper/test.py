@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../deepCR")
 from deepCR import deepCR
 import numpy as np
 model = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')

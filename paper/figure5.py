@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../deepCR")
 
 import torch
 from torch import from_numpy
