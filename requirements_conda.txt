@@ -7,3 +7,4 @@ python=3.7.3=h0371630_0
 scikit-image=0.15.0=pypi_0
 scipy=1.2.1=pypi_0
 torch=1.1.0=pypi_0
+tqdm

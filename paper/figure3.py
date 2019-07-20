@@ -1,176 +1,66 @@
 import sys
 sys.path.append("../deepCR")
-import os
-import time
+
 import torch
-import torch.nn as nn
 from torch import from_numpy
 from torch.utils.data import DataLoader
+import torch.nn as nn
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.morphology import dilation, square
-from scipy.interpolate import interp1d
+import numpy.ma as ma
+
 import astroscrappy.astroscrappy as lac
 from deepCR import deepCR
-from util import ROC_LACosmic, ROC_DAE, maskMetric
 from data import data
-dtype = torch.cuda.FloatTensor # GPU training
 
-print('Creating Figure 3: ROC curves')
-
-# load test data
+dtype = torch.cuda.FloatTensor
 filename = 'data/ACS-WFC-F606W-test.pkl'
-dset_test_EX = data(filename, field=['EX','GC'])
-dset_test_GAL = data(filename, field='GAL')
+dset_test_EX = data(filename, field='EX')
 
-# first calculate ROC curves for LACosmic
-# to save time, we saved calculated
-# LACosmic ROC curves in LAC.npy
-# if LAC.npy doesn't exist we will calculate again
-# variables ending in _3 are with rad-3 square dilation
-if os.path.isfile('LAC.npy'):
-    save = np.load('LAC.npy')
-    TPR_EX_LAC = save[0]
-    FPR_EX_LAC = save[1]
-    TPR_EX_LAC_3 = save[2]
-    FPR_EX_LAC_3 = save[3]
-    TPR_GAL_LAC = save[4]
-    FPR_GAL_LAC = save[5]
-    TPR_GAL_LAC_3 = save[6]
-    FPR_GAL_LAC_3 = save[7]
-    print('LACosmic ROC curves from LAC.npy ')
-else:
-    (TPR_EX_LAC, FPR_EX_LAC),(TPR_EX_LAC_3, FPR_EX_LAC_3) = ROC_LACosmic(dset_test_EX, np.linspace(3,30,100), 2.6, limit=320, dilate=square(3))
-    (TPR_GAL_LAC, FPR_GAL_LAC), (TPR_GAL_LAC_3, FPR_GAL_LAC_3) = ROC_LACosmic(dset_test_GAL, np.linspace(6,60,100), 4.5, limit=320, dilate=square(3))
-    save = []
-    for i in [TPR_EX_LAC, FPR_EX_LAC,TPR_EX_LAC_3, FPR_EX_LAC_3, TPR_GAL_LAC, FPR_GAL_LAC, TPR_GAL_LAC_3, FPR_GAL_LAC_3]:
-        save.append(i)
-    np.save('LAC.npy', np.array(save))
+model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32',device='GPU')
 
-# calculate ROC curves for two variants of deepCR-mask
-deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
-(TPR_EX, FPR_EX), (TPR_EX_3, FPR_EX_3) = ROC_DAE(deepCR_2_32, dset_test_EX, np.linspace(0.001,0.999,100), 320,  dilate=square(3))
-(TPR_GAL, FPR_GAL), (TPR_GAL_3 , FPR_GAL_3) = ROC_DAE(deepCR_2_32, dset_test_GAL, np.linspace(0.01,0.99,100), 320, dilate=square(3))
-deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
-(TPR_EX4, FPR_EX4), (TPR_EX4_3, FPR_EX4_3) = ROC_DAE(deepCR_2_4, dset_test_EX, np.linspace(0.001,0.999,100), 20,  dilate=square(3))
-(TPR_GAL4, FPR_GAL4), (TPR_GAL4_3 , FPR_GAL4_3) = ROC_DAE(deepCR_2_4, dset_test_GAL, np.linspace(0.01,0.99,100), 20, dilate=square(3))
+img0=np.zeros((7*256,15*256))
+img1=np.zeros((7*256,15*256))
+mask=np.zeros((7*256,15*256))
+for i in range(105):
+    img0[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = dset_test_EX[i+105][0]
+    mask_, img1_ = model.clean(dset_test_EX[i+105][0], threshold=0.7)
+    mask[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = mask_
+    img1[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = img1_
+img0=img0[:1024,-1024:]
+img1=img1[:1024,-1024:]
+mask=mask[:1024,-1024:]
 
-# generate figure 3
-plt.figure(figsize=(8,4))
-plt.subplot(121)
-plt.plot(FPR_EX, TPR_EX_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
-plt.plot(FPR_EX_LAC, TPR_EX_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-plt.plot(FPR_EX, TPR_EX, 'k-', label='deepCR-2-32', linewidth=1)
-plt.plot(FPR_EX_LAC, TPR_EX_LAC, 'k-.', label='LACosmic', linewidth=1)
+#mask, img1 = model.clean(img0, seg=128)
 
-plt.legend(loc=4)
-plt.xlim(0,1)
-plt.ylim(40,100)
-plt.xlabel('false positive rate [%]', fontsize=12)
-plt.ylabel('true positive rate [%]', fontsize=12)
-plt.title('sparse-exgal', fontsize=12)
-
-plt.subplot(122)
-plt.plot(FPR_GAL, TPR_GAL_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GAL_LAC, TPR_GAL_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GAL, TPR_GAL, 'k-', label='deepCR-2-32', linewidth=1)
-plt.plot(FPR_GAL_LAC, TPR_GAL_LAC, 'k-.', label='LACosmic', linewidth=1)
-
-plt.legend(loc=4)
-plt.xlim(0,1)
-plt.ylim(40,100)
-plt.xlabel('false positive rate [%]', fontsize=12)
-plt.title('dense-gal', fontsize=12)
+plt.rcParams['figure.dpi'] = 200
+fig,ax = plt.subplots(1,2,frameon=False)
+fig.set_size_inches(20,10)
+vmin=np.log10(np.percentile(img1, 25))*-1
+vmax=np.log10(np.percentile(img1, 99.99))*-1
+ax[0].imshow(np.log10(img0)*-1, vmin=vmax, vmax=vmin, cmap='gray')
+ax[1].imshow(np.log10(img1)*-1, vmin=vmax, vmax=vmin, cmap='gray')
+plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
+plt.subplots_adjust(wspace=0, hspace=0)
 plt.tight_layout()
-plt.savefig('figure/ROC.pdf', fmt='pdf', bbox_inches='tight')
+plt.savefig('figure/figure3a1.png', fmt='png', bbox='tight')
 
-# interpolate f:FPR --> TPR
-fex = interp1d(FPR_EX,TPR_EX)
-fex_lac = interp1d(FPR_EX_LAC,TPR_EX_LAC)
-fex3 = interp1d(FPR_EX,TPR_EX_3)
-fex3_lac = interp1d(FPR_EX,TPR_EX_LAC_3)
+ex_examples = []
+rows = 8
+fig, ax = plt.subplots(3, rows, sharex=True, sharey=True)
+fig.set_size_inches(20, 7.67)
+plt.subplots_adjust(wspace=0, hspace=0)
+locs = [[420, 120], [800, 50], [120, 740], [690, 650], [940, 740], [100, 200], [1000, 420], [900, 130]]
+np.random.seed(2)
+for i in range(rows):
+    loc = locs[i]
+    imgg = np.log10(img0[loc[0] - 48:loc[0], loc[1] - 48:loc[1]]) * -1
+    ax[0, i].imshow(imgg, cmap='gray', vmin=vmax, vmax=vmin)
+    mx = ma.masked_array(imgg, mask=~mask[loc[0] - 48:loc[0], loc[1] - 48:loc[1]].astype(bool))
+    ax[1, i].imshow(mx, cmap='gray', vmin=vmax, vmax=vmin)
+    ax[2, i].imshow(np.log10(img1[loc[0] - 48:loc[0], loc[1] - 48:loc[1]]) * -1, cmap='gray', vmin=vmax, vmax=vmin)
 
-fex4 = interp1d(FPR_EX4,TPR_EX4)
-fex43 = interp1d(FPR_EX4,TPR_EX4_3)
-fgal4 = interp1d(FPR_GAL4,TPR_GAL4)
-fgal43 = interp1d(FPR_GAL4,TPR_GAL4_3)
-
-fgal = interp1d(FPR_GAL,TPR_GAL)
-fgal_lac = interp1d(FPR_GAL_LAC,TPR_GAL_LAC)
-fgal3 = interp1d(FPR_GAL,TPR_GAL_3)
-fgal3_lac = interp1d(FPR_GAL,TPR_GAL_LAC_3)
-
-# dummy variable to evaluate runtime on deepCR
-var = from_numpy(dset_test_EX[0][0]).type(dtype).reshape(1,1,256,256)
-varcpu = from_numpy(dset_test_EX[0][0]).type(torch.FloatTensor).reshape(1,1,256,256)
-
-#model = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
-t0= time.time()
-for i in range(10000):
-    a=deepCR_2_32.maskNet(var)
-deepCR_GPU = (time.time()-t0)/100
-
-deepCR_2_32_cpu = deepCR(mask='ACS-WFC-F606W-2-32', device='CPU')
-t0= time.time()
-for i in range(2000):
-    a=deepCR_2_32_cpu.maskNet(varcpu)
-deepCR_CPU = (time.time()-t0)/20
-
-#model = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
-t0= time.time()
-for i in range(10000):
-    deepCR_2_4.maskNet(var)
-deepCR4_GPU = (time.time()-t0)/100
-
-deepCR_2_4_cpu = deepCR(mask='ACS-WFC-F606W-2-4', device='CPU')
-t0= time.time()
-for i in range(2000):
-    deepCR_2_4_cpu.maskNet(varcpu)
-deepCR4_CPU = (time.time()-t0)/20
-
-t0= time.time()
-for i in range(500):
-    a = lac.detect_cosmics(dset_test_EX[0][0]*100, objlim=5.5, sigclip=2,
-                   sigfrac=0.3, gain=1, readnoise=5, satlevel = np.inf,
-                   sepmed=False, cleantype='medmask', niter=6)
-LACosmic_CPU = (time.time()-t0)/5
-
-# generate table2
-table2 = []
-table2.append('\\begin{table*}\n \\label{table:mask}\n \\caption{Mask prediction benchmarks. Each column shows true positive rates (TPR) at the specified false positive rates (FPR; 0.01\% and 0.1\%), for either sparse-exgal or dense-gal fields. TPR in parenthesis shows benchmark value after mask dilation, as described in the main text.}\n \\centering\n')
-table2.append('  \\begin{tabular}{l|ll|ll|ll} \n \\toprule \n          &sparse-exgal & & dense-gal& & &    \\\\\n        Model &TPR (0.02\%) & TPR (0.1\%)& TPR (0.02\%)&TPR (0.1\%)&Time (CPU) &Time (GPU)  \\\\\n \\midrule\n')
-
-ans='deepCR-2-4 &'
-ans+=str(fex4(0.02))[:4]+'\% ('+str(fex43(0.02))[:4]+'\%) &'
-ans+=str(fex4(0.1))[:4]+'\% ('+str(fex43(0.1))[:4]+'\%) &'
-ans+=str(fgal4(0.02))[:4]+'\% ('+str(fgal43(0.02))[:4]+'\%) &'
-ans+=str(fgal4(0.1))[:4]+'\% ('+str(fgal43(0.1))[:4]+'\%) &'
-ans+='\\textbf{%.1f} &'%deepCR4_CPU
-ans+='\\textbf{%.1f}'%deepCR4_GPU
-ans+='\\\\\n'
-table2.append(ans)
-
-ans='deepCR-2-32 &'
-ans+='\\textbf{'+str(fex(0.02))[:4]+'\%} ('+str(fex3(0.02))[:4]+'\%) &'
-ans+='\\textbf{'+str(fex(0.1))[:4]+'\%} ('+str(fex3(0.1))[:4]+'\%) &'
-ans+='\\textbf{'+str(fgal(0.02))[:4]+'\%} ('+str(fgal3(0.02))[:4]+'\%)&'
-ans+='\\textbf{'+str(fgal(0.1))[:4]+'\%} ('+str(fgal3(0.1))[:4]+'\%)&'
-ans+='%.1f &'%deepCR_CPU
-ans+='%.1f'%deepCR_GPU
-ans+='\\\\\n'
-table2.append(ans)
-
-ans='LACosmic &'
-ans+=str(fex_lac(0.02))[:4]+'\% ('+str(fex3_lac(0.02))[:4]+'\%) &'
-ans+=str(fex_lac(0.1))[:4]+'\% ('+str(fex3_lac(0.1))[:4]+'\%) &'
-ans+=str(fgal_lac(0.02))[:4]+'\% ('+str(fgal3_lac(0.02))[:4]+'\%) &'
-ans+=str(fgal_lac(0.1))[:4]+'\% ('+str(fgal3_lac(0.1))[:4]+'\%) &'
-ans+='%.1f'%LACosmic_CPU + ' & -'
-ans+='\\\\\n'
-table2.append(ans)
-
-table2.append('\\bottomrule \n \\end{tabular}\n\\end{table*}')
-print('saved')
-with open("table/table2.txt", "w") as file:
-    for line in table2:
-        file.write(line)
+plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
+plt.subplots_adjust(wspace=0.05, hspace=0.05)
+plt.tight_layout()
+plt.savefig('figure/figure3b1.png', fmt='png', bbox='tight')
