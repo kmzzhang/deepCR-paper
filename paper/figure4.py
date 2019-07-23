@@ -39,8 +39,8 @@ dset_test_GAL = data(filename, field='GAL')
 # LACosmic ROC curves in LAC.npy
 # if LAC.npy doesn't exist we will calculate again
 # variables ending in _3 are with rad-3 square dilation
-if os.path.isfile('ROC_LACosmic.npy'):
-    save = np.load('ROC_LACosmic.npy')
+if os.path.isfile('benchmark_data/ROC_LACosmic.npy'):
+    save = np.load('benchmark_data/ROC_LACosmic.npy')
     TPR_EX_LAC = save[0]
     FPR_EX_LAC = save[1]
     TPR_EX_LAC_3 = save[2]
@@ -53,7 +53,7 @@ if os.path.isfile('ROC_LACosmic.npy'):
     FPR_GC_LAC = save[9]
     TPR_GC_LAC_3 = save[10]
     FPR_GC_LAC_3 = save[11]
-    print('Loaded LACosmic ROC curves from ROC_LACosmic.npy')
+    print('Loaded LACosmic ROC curves from benchmark_data/ROC_LACosmic.npy')
 else:
     print('calculating LACosmic ROC curves')
     (TPR_EX_LAC, FPR_EX_LAC),(TPR_EX_LAC_3, FPR_EX_LAC_3) = ROC_LACosmic(dset_test_EX, np.linspace(3,30,100), 2, limit=320, dilate=square(3))
@@ -67,11 +67,11 @@ else:
     for i in [TPR_EX_LAC, FPR_EX_LAC, TPR_EX_LAC_3, FPR_EX_LAC_3, TPR_GAL_LAC, FPR_GAL_LAC, TPR_GAL_LAC_3,
               FPR_GAL_LAC_3, TPR_GC_LAC, FPR_GC_LAC, TPR_GC_LAC_3, FPR_GC_LAC_3]:
         save.append(i)
-    np.save('ROC_LACosmic.npy', np.array(save))
-    print('saved to ROC_LACosmic.npy')
+    np.save('benchmark_data/ROC_LACosmic.npy', np.array(save))
+    print('saved to benchmark_data/ROC_LACosmic.npy')
 
-if os.path.isfile('ROC_deepCR.npy'):
-    save = np.load('ROC_deepCR.npy')
+if os.path.isfile('benchmark_data/ROC_deepCR.npy'):
+    save = np.load('benchmark_data/ROC_deepCR.npy')
     TPR_EX = save[0]
     FPR_EX = save[1]
     TPR_EX_3 = save[2]
@@ -93,7 +93,7 @@ if os.path.isfile('ROC_deepCR.npy'):
     if gpu_available:
         deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
         deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
-    print('Loaded deepCR ROC curves from ROC_deepCR.npy')
+    print('Loaded deepCR ROC curves from benchmark_data/ROC_deepCR.npy')
 else:
     # calculate ROC curves for two variants of deepCR-mask
     print('calculating deepCR ROC curves.')
@@ -123,8 +123,8 @@ else:
     for i in [TPR_EX, FPR_EX, TPR_EX_3, TPR_GAL, FPR_GAL, TPR_GAL_3, TPR_EX4, FPR_EX4, TPR_EX4_3, TPR_GAL4, FPR_GAL4,
               TPR_GAL4_3, TPR_GC, FPR_GC, TPR_GC_3, TPR_GC4, FPR_GC4, TPR_GC4_3]:
         save.append(i)
-    np.save('ROC_deepCR.npy', np.array(save))
-    print('saved to ROC_deepCR.npy')
+    np.save('benchmark_data/ROC_deepCR.npy', np.array(save))
+    print('saved to benchmark_data/ROC_deepCR.npy')
 
 # generate figure 3
 plt.figure(figsize=(12,4))

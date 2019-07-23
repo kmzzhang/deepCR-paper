@@ -87,11 +87,11 @@ def test_GAL(inputs):
 
 # Pre-computed results are available in *.npy files
 # Please delete these files if you would like to reproduce these numbers
-if os.path.isfile('inpaint_non_neural.npy'):
-    print('non neural metrics loaded from inpaint_non_neural.npy')
+if os.path.isfile('benchmark_data/inpaint_non_neural.npy'):
+    print('non neural metrics loaded from benchmark_data/inpaint_non_neural.npy')
     np_load_old = np.load
     np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
-    save = np.load('inpaint_non_neural.npy')
+    save = np.load('benchmark_data/inpaint_non_neural.npy')
     np.load = np_load_old
     med_ex = save[0]
     med_gal = save[1]
@@ -121,14 +121,14 @@ else:
     bi_gal = np.array(bi_gal).reshape(-1)
     bi_gc = np.array(bi_gc).reshape(-1)
     results = np.array([med_ex, med_gal, med_gc, bi_ex, bi_gal, bi_gc])
-    np.save('inpaint_non_neural.npy', results)
-    print('non neural metrics saved to inpaint_non_neural.npy')
+    np.save('benchmark_data/inpaint_non_neural.npy', results)
+    print('non neural metrics saved to benchmark_data/inpaint_non_neural.npy')
 
-if os.path.isfile('inpaint_deepCR.npy'):
-    print('deepCR metrics loaded from inpaint_deepCR.npy')
+if os.path.isfile('benchmark_data/inpaint_deepCR.npy'):
+    print('deepCR metrics loaded from benchmark_data/inpaint_deepCR.npy')
     np_load_old = np.load
     np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
-    save = np.load('inpaint_deepCR.npy')
+    save = np.load('benchmark_data/inpaint_deepCR.npy')
     np.load = np_load_old
     deep_ex = save[0]
     deep_gal = save[1]
@@ -165,8 +165,8 @@ else:
     deep4_gal = np.array(deep4_gal).reshape(-1)
     deep4_gc = np.array(deep4_gc).reshape(-1)
     results = np.array([deep_ex, deep_gal, deep_gc, deep4_ex, deep4_gal, deep4_gc])
-    np.save('inpaint_deepCR.npy', results)
-    print('deepCR metrics saved to inpaint_deepCR.npy')
+    np.save('benchmark_data/inpaint_deepCR.npy', results)
+    print('deepCR metrics saved to benchmark_data/inpaint_deepCR.npy')
 
 np.random.seed(0)
 t0 = time.time()
