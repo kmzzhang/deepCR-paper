@@ -1,0 +1,16 @@
+\begin{table*}
+ \label{table:inpaint}
+ \caption{}
+ \centering
+  \begin{tabular}{llllll} 
+ \toprule 
+         & extragalactic    & globular cluster & resolved galaxy & \multicolumn{2}{c}{runtime}\\
+        Model & MSE & MSE& MSE & CPU & GPU  \\
+ \midrule
+  deepCR-2-32&0.012 & 0.034 & 0.503 & 7.5 & 0.2  \\
+  deepCR-3-32&0.012 & 0.033 & 0.479 & 12.7 & 0.3  \\
+  medmask&0.105 & 1.511 & 5.946 & 1.0 & n/a \\
+  biharmonic&0.041 & 0.669 & 2.578 & 109.5 & n/a \\
+\bottomrule 
+ \end{tabular}
+\end{table*}

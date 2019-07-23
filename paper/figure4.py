@@ -1,7 +1,8 @@
 import sys
 sys.path.append("../deepCR")
 import os
-os.environ['CUDA_VISIBLE_DEVICES']="1"
+# Change the number of GPU used as you wish
+#os.environ['CUDA_VISIBLE_DEVICES']="1"
 import time
 import torch
 import torch.nn as nn
@@ -10,15 +11,23 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.morphology import dilation, square
-
 from scipy.interpolate import interp1d
 import astroscrappy.astroscrappy as lac
 from deepCR import deepCR
 from util import ROC_LACosmic, ROC_DAE, maskMetric
 from data import data
-dtype = torch.cuda.FloatTensor # GPU training
 
-print('Creating Figure 3: ROC curves')
+print('Creating Figure 4: ROC curves')
+
+gpu_available = torch.cuda.is_available()
+if not gpu_available:
+    print('')
+    print('Warning: GPU not detected on your device.')
+    print('It is fine if you are generating figures and tables')
+    print('    from the pre-computed data in the *.npy files')
+    print('Otherwise, deepCR benchmark takes very long to run on CPU.')
+    print('We recommend that you abort and switch to device with GPU,')
+    print('    if you would like to run the benchmarks from stretch.')
 
 # load test data
 filename = 'data/ACS-WFC-F606W-test.pkl'
@@ -62,7 +71,7 @@ else:
     np.save('ROC_LACosmic.npy', np.array(save))
     print('saved to ROC_LACosmic.npy')
 
-if os.path.isfile('ROC_deepCR.npy'):
+if os.path.isfile('ROC_deepCR_.npy'):
     save = np.load('ROC_deepCR.npy')
     TPR_EX = save[0]
     FPR_EX = save[1]
@@ -82,18 +91,24 @@ if os.path.isfile('ROC_deepCR.npy'):
     TPR_GC4 = save[15]
     FPR_GC4 = save[16]
     TPR_GC4_3 = save[17]
-    deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
-    deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
+    if gpu_available:
+        deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
+        deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
     print('Loaded deepCR ROC curves from ROC_deepCR.npy')
 else:
     # calculate ROC curves for two variants of deepCR-mask
     print('calculating deepCR ROC curves.')
-    deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
+    if gpu_available:
+        deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='GPU')
+        deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
+    else:
+        deepCR_2_32 = deepCR(mask='ACS-WFC-F606W-2-32', device='CPU')
+        deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='CPU')
     (TPR_EX, FPR_EX), (TPR_EX_3, FPR_EX_3) = ROC_DAE(deepCR_2_32, dset_test_EX, np.linspace(0.001, 0.999, 500), 320,
                                                      dilate=square(3))
     (TPR_GAL, FPR_GAL), (TPR_GAL_3, FPR_GAL_3) = ROC_DAE(deepCR_2_32, dset_test_GAL, np.linspace(0.01, 0.99, 500), 320,
                                                          dilate=square(3))
-    deepCR_2_4 = deepCR(mask='ACS-WFC-F606W-2-4', device='GPU')
+
     (TPR_EX4, FPR_EX4), (TPR_EX4_3, FPR_EX4_3) = ROC_DAE(deepCR_2_4, dset_test_EX, np.linspace(0.001, 0.999, 500), 320,
                                                          dilate=square(3))
     (TPR_GAL4, FPR_GAL4), (TPR_GAL4_3, FPR_GAL4_3) = ROC_DAE(deepCR_2_4, dset_test_GAL, np.linspace(0.01, 0.99, 500),
@@ -115,23 +130,23 @@ else:
 # generate figure 3
 plt.figure(figsize=(12,4))
 plt.subplot(131)
-plt.plot(FPR_EX, TPR_EX_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
-plt.plot(FPR_EX_LAC, TPR_EX_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-plt.plot(FPR_EX, TPR_EX, 'k-', label='deepCR-2-32', linewidth=1)
-plt.plot(FPR_EX_LAC, TPR_EX_LAC, 'k-.', label='LACosmic', linewidth=1)
+plt.plot(FPR_EX, TPR_EX_3, 'r--', label='deepCR-2-32 +', linewidth=1.8)
+plt.plot(FPR_EX_LAC, TPR_EX_LAC_3, 'r:', label='LACosmic +', linewidth=1.2)
+plt.plot(FPR_EX, TPR_EX, 'k-', label='deepCR-2-32', linewidth=1.8)
+plt.plot(FPR_EX_LAC, TPR_EX_LAC, 'k-.', label='LACosmic', linewidth=1.2)
 
 plt.legend(loc=4)
 plt.xlim(0,1)
 plt.ylim(40,100)
 plt.xlabel('false positive rate [%]', fontsize=12)
 plt.ylabel('true positive rate [%]', fontsize=12)
-plt.title('extragalactic fields', fontsize=12)
+plt.title('extragalactic field', fontsize=12)
 
 plt.subplot(132)
-plt.plot(FPR_GC, TPR_GC_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GC_LAC, TPR_GC_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GC, TPR_GC, 'k-', label='deepCR-2-32', linewidth=1)
-plt.plot(FPR_GC_LAC, TPR_GC_LAC, 'k-.', label='LACosmic', linewidth=1)
+plt.plot(FPR_GC, TPR_GC_3, 'r--', label='deepCR-2-32 +', linewidth=1.8)
+plt.plot(FPR_GC_LAC, TPR_GC_LAC_3, 'r:', label='LACosmic +', linewidth=1.2)
+plt.plot(FPR_GC, TPR_GC, 'k-', label='deepCR-2-32', linewidth=1.8)
+plt.plot(FPR_GC_LAC, TPR_GC_LAC, 'k-.', label='LACosmic', linewidth=1.2)
 
 plt.legend(loc=4)
 plt.xlim(0,1)
@@ -141,10 +156,10 @@ plt.ylabel('true positive rate [%]', fontsize=12)
 plt.title('globular cluster', fontsize=12)
 
 plt.subplot(133)
-plt.plot(FPR_GAL, TPR_GAL_3, 'r-', label='deepCR-2-32 +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GAL_LAC, TPR_GAL_LAC_3, 'r--', label='LACosmic +', linewidth=2,alpha=0.5)
-plt.plot(FPR_GAL, TPR_GAL, 'k-', label='deepCR-2-32', linewidth=1)
-plt.plot(FPR_GAL_LAC, TPR_GAL_LAC, 'k-.', label='LACosmic', linewidth=1)
+plt.plot(FPR_GAL, TPR_GAL_3, 'r--', label='deepCR-2-32 +', linewidth=1.8)
+plt.plot(FPR_GAL_LAC, TPR_GAL_LAC_3, 'r:', label='LACosmic +', linewidth=1.2)
+plt.plot(FPR_GAL, TPR_GAL, 'k-', label='deepCR-2-32', linewidth=1.8)
+plt.plot(FPR_GAL_LAC, TPR_GAL_LAC, 'k-.', label='LACosmic', linewidth=1.2)
 
 plt.legend(loc=4)
 plt.xlim(0,1)
@@ -152,9 +167,9 @@ plt.ylim(40,100)
 plt.xlabel('false positive rate [%]', fontsize=12)
 plt.title('resolved galaxy', fontsize=12)
 plt.tight_layout()
-plt.savefig('figure/ROC_GC.pdf', fmt='pdf', bbox_inches='tight')
+plt.savefig('figure/ROC.pdf', fmt='pdf', bbox_inches='tight')
 
-print('ROC curve plot saved to figure/ROC_GC.pdf')
+print('Figure 4 saved to figure/ROC.pdf')
 
 # interpolate f:FPR --> TPR
 fex = interp1d(FPR_EX,TPR_EX)
@@ -181,22 +196,26 @@ fgc4 = interp1d(FPR_GC4,TPR_GC4)
 fgc43 = interp1d(FPR_GC4,TPR_GC4_3)
 
 # dummy variable to evaluate runtime on deepCR
-npvar = dset_test_EX[0][0]
-var = from_numpy(dset_test_EX[0][0]).type(dtype).reshape(1,1,256,256)
+if gpu_available:
+    var = from_numpy(dset_test_EX[0][0]).type(torch.cuda.FloatTensor).reshape(1,1,256,256)
+    t0= time.time()
+    for i in range(500):
+        a=deepCR_2_32.maskNet(var)
+    deepCR_GPU = (time.time()-t0)/5
+    t0= time.time()
+    for i in range(500):
+        deepCR_2_4.maskNet(var)
+    deepCR4_GPU = (time.time()-t0)/5
+else:
+    deepCR_GPU = 0
+    deepCR4_GPU = 0
+
 varcpu = from_numpy(dset_test_EX[0][0]).type(torch.FloatTensor).reshape(1,1,256,256)
-t0= time.time()
-for i in range(500):
-    a=deepCR_2_32.maskNet(var)
-deepCR_GPU = (time.time()-t0)/5
 deepCR_2_32_cpu = deepCR(mask='ACS-WFC-F606W-2-32', device='CPU')
 t0= time.time()
 for i in range(500):
     a=deepCR_2_32_cpu.maskNet(varcpu)
 deepCR_CPU = (time.time()-t0)/5
-t0= time.time()
-for i in range(500):
-    deepCR_2_4.maskNet(var)
-deepCR4_GPU = (time.time()-t0)/5
 
 deepCR_2_4_cpu = deepCR(mask='ACS-WFC-F606W-2-4', device='CPU')
 t0= time.time()
@@ -212,54 +231,54 @@ LACosmic_CPU = (time.time()-t0)/5
 
 # generate table2
 table2 = []
-table2.append('\\begin{table*}\n \\label{table:mask}\n \\caption{}\n \\centering\n')
-table2.append('  \\begin{tabular}{llllll} \n \\toprule \n          & extragalactic fields & globular cluster & resolved galaxy & \\multicolumn{2}{c}{runtime}   \\\\\n        Model &TPR (0.02\%)& TPR (0.02\%)& TPR (0.02\%)& CPU & GPU \\\\\n \\midrule\n')
+table2.append('\\begin{table*}[t]\n \\label{table:mask}\n \\caption{}\n \\centering\n')
+table2.append('  \\begin{tabular}{*{6}{c}} \n \\toprule \n          & extragalactic field & globular cluster & resolved galaxy & \\multicolumn{2}{c}{runtime}   \\\\\n        Model &TPR (0.05\%)& TPR (0.05\%)& TPR (0.05\%)& CPU & GPU \\\\\n \\midrule\n')
 
 ans='deepCR-2-4 &'
-ans+=str(fex4(0.02))[:4]+'\% ('+str(fex43(0.02))[:4]+'\%) &'
-ans+=str(fgc4(0.02))[:4]+'\% ('+str(fgc43(0.02))[:4]+'\%) &'
-ans+=str(fgal4(0.02))[:4]+'\% ('+str(fgal43(0.02))[:4]+'\%) &'
+ans+=str(fex4(0.05))[:4]+'\% ('+str(fex43(0.05))[:4]+'\%) &'
+ans+=str(fgc4(0.05))[:4]+'\% ('+str(fgc43(0.05))[:4]+'\%) &'
+ans+=str(fgal4(0.05))[:4]+'\% ('+str(fgal43(0.05))[:4]+'\%) &'
 ans+='\\textbf{%.1fs} &'%deepCR4_CPU
 ans+='\\textbf{%.1fs}'%deepCR4_GPU
 ans+='\\\\\n'
 table2.append(ans)
 ans='deepCR-2-32 &'
-ans+='\\textbf{'+str(fex(0.02))[:4]+'\%} ('+str(fex3(0.02))[:4]+'\%) &'
-ans+='\\textbf{'+str(fgc(0.02))[:4]+'\%} ('+str(fgc3(0.02))[:4]+'\%)&'
-ans+='\\textbf{'+str(fgal(0.02))[:4]+'\%} ('+str(fgal3(0.02))[:4]+'\%)&'
+ans+='\\textbf{'+str(fex(0.05))[:4]+'\%} ('+str(fex3(0.05))[:4]+'\%) &'
+ans+='\\textbf{'+str(fgc(0.05))[:4]+'\%} ('+str(fgc3(0.05))[:4]+'\%)&'
+ans+='\\textbf{'+str(fgal(0.05))[:4]+'\%} ('+str(fgal3(0.05))[:4]+'\%)&'
 ans+='%.1fs &'%deepCR_CPU
 ans+='%.1fs'%deepCR_GPU
 ans+='\\\\\n'
 table2.append(ans)
 
 ans='\\LACosmic &'
-ans+=str(fex_lac(0.02))[:4]+'\% ('+str(fex3_lac(0.02))[:4]+'\%) &'
-ans+=str(fgc_lac(0.02))[:4]+'\% ('+str(fgc3_lac(0.02))[:4]+'\%) &'
-ans+=str(fgal_lac(0.02))[:4]+'\% ('+str(fgal3_lac(0.02))[:4]+'\%) &'
+ans+=str(fex_lac(0.05))[:4]+'\% ('+str(fex3_lac(0.05))[:4]+'\%) &'
+ans+=str(fgc_lac(0.05))[:4]+'\% ('+str(fgc3_lac(0.05))[:4]+'\%) &'
+ans+=str(fgal_lac(0.05))[:4]+'\% ('+str(fgal3_lac(0.05))[:4]+'\%) &'
 ans+='%.1fs'%LACosmic_CPU + ' & n/a'
 ans+='\\\\\n'
 table2.append(ans)
 
-table2.append(' \midrule \n \midrule \n &TPR (0.1\%)& TPR (0.1\%)& TPR (0.1\%) \\\\\n \\midrule \n')
+table2.append(' \midrule \n \midrule \n &TPR (0.5\%)& TPR (0.5\%)& TPR (0.5\%) \\\\\n \\midrule \n')
 
 ans='deepCR-2-4 &'
-ans+=str(fex4(0.1))[:4]+'\% ('+str(fex43(0.1))[:4]+'\%) &'
-ans+=str(fgc4(0.1))[:4]+'\% ('+str(fgc43(0.1))[:4]+'\%) &'
-ans+=str(fgal4(0.1))[:4]+'\% ('+str(fgal43(0.1))[:4]+'\%) &'
+ans+=str(fex4(0.5))[:4]+'\% ('+str(fex43(0.5))[:4]+'\%) &'
+ans+=str(fgc4(0.5))[:4]+'\% ('+str(fgc43(0.5))[:4]+'\%) &'
+ans+=str(fgal4(0.5))[:4]+'\% ('+str(fgal43(0.5))[:4]+'\%) &'
 ans+='\\\\\n'
 table2.append(ans)
 
 ans='deepCR-2-32 &'
-ans+='\\textbf{'+str(fex(0.1))[:4]+'\%} ('+str(fex3(0.1))[:4]+'\%) &'
-ans+='\\textbf{'+str(fgc(0.1))[:4]+'\%} ('+str(fgc3(0.1))[:4]+'\%)&'
-ans+='\\textbf{'+str(fgal(0.1))[:4]+'\%} ('+str(fgal3(0.1))[:4]+'\%)&'
+ans+='\\textbf{'+str(fex(0.5))[:4]+'\%} ('+str(fex3(0.5))[:4]+'\%) &'
+ans+='\\textbf{'+str(fgc(0.5))[:4]+'\%} ('+str(fgc3(0.5))[:4]+'\%)&'
+ans+='\\textbf{'+str(fgal(0.5))[:4]+'\%} ('+str(fgal3(0.5))[:4]+'\%)&'
 ans+='\\\\\n'
 table2.append(ans)
 
 ans='\\LACosmic &'
-ans+=str(fex_lac(0.1))[:4]+'\% ('+str(fex3_lac(0.1))[:4]+'\%) &'
-ans+=str(fgc_lac(0.1))[:4]+'\% ('+str(fgc3_lac(0.1))[:4]+'\%) &'
-ans+=str(fgal_lac(0.1))[:4]+'\% ('+str(fgal3_lac(0.1))[:4]+'\%) &'
+ans+=str(fex_lac(0.5))[:4]+'\% ('+str(fex3_lac(0.5))[:4]+'\%) &'
+ans+=str(fgc_lac(0.5))[:4]+'\% ('+str(fgc3_lac(0.5))[:4]+'\%) &'
+ans+=str(fgal_lac(0.5))[:4]+'\% ('+str(fgal3_lac(0.5))[:4]+'\%) &'
 ans+='\\\\\n'
 table2.append(ans)
 
@@ -269,44 +288,4 @@ print('saved')
 with open("table/table2.txt", "w") as file:
     for line in table2:
         file.write(line)
-"""
-# generate table2
-table2 = []
-table2.append('\\begin{table*}\n \\label{table:mask}\n \\caption{Mask prediction benchmarks. Each column shows true positive rates (TPR) at the specified false positive rates (FPR; 0.01\% and 0.1\%), for either sparse-exgal or dense-gal fields. TPR in parenthesis shows benchmark value after mask dilation, as described in the main text.}\n \\centering\n')
-table2.append('  \\begin{tabular}{l|ll|ll|ll} \n \\toprule \n          &extragalactic & & resolved galaxy& & &    \\\\\n        Model &TPR (0.02\%) & TPR (0.1\%)& TPR (0.02\%)&TPR (0.1\%)&Time (CPU) &Time (GPU)  \\\\\n \\midrule\n')
-
-ans='deepCR-2-4 &'
-ans+=str(fex4(0.02))[:4]+'\% ('+str(fex43(0.02))[:4]+'\%) &'
-ans+=str(fex4(0.1))[:4]+'\% ('+str(fex43(0.1))[:4]+'\%) &'
-ans+=str(fgal4(0.02))[:4]+'\% ('+str(fgal43(0.02))[:4]+'\%) &'
-ans+=str(fgal4(0.1))[:4]+'\% ('+str(fgal43(0.1))[:4]+'\%) &'
-ans+='\\textbf{%.1f} &'%deepCR4_CPU
-ans+='\\textbf{%.1f}'%deepCR4_GPU
-ans+='\\\\\n'
-table2.append(ans)
-
-ans='deepCR-2-32 &'
-ans+='\\textbf{'+str(fex(0.02))[:4]+'\%} ('+str(fex3(0.02))[:4]+'\%) &'
-ans+='\\textbf{'+str(fex(0.1))[:4]+'\%} ('+str(fex3(0.1))[:4]+'\%) &'
-ans+='\\textbf{'+str(fgal(0.02))[:4]+'\%} ('+str(fgal3(0.02))[:4]+'\%)&'
-ans+='\\textbf{'+str(fgal(0.1))[:4]+'\%} ('+str(fgal3(0.1))[:4]+'\%)&'
-ans+='%.1f &'%deepCR_CPU
-ans+='%.1f'%deepCR_GPU
-ans+='\\\\\n'
-table2.append(ans)
-
-ans='LACosmic &'
-ans+=str(fex_lac(0.02))[:4]+'\% ('+str(fex3_lac(0.02))[:4]+'\%) &'
-ans+=str(fex_lac(0.1))[:4]+'\% ('+str(fex3_lac(0.1))[:4]+'\%) &'
-ans+=str(fgal_lac(0.02))[:4]+'\% ('+str(fgal3_lac(0.02))[:4]+'\%) &'
-ans+=str(fgal_lac(0.1))[:4]+'\% ('+str(fgal3_lac(0.1))[:4]+'\%) &'
-ans+='%.1f'%LACosmic_CPU + ' & -'
-ans+='\\\\\n'
-table2.append(ans)
-
-table2.append('\\bottomrule \n \\end{tabular}\n\\end{table*}')
-print('saved')
-with open("table/table2.txt", "w") as file:
-    for line in table2:
-        file.write(line)
-"""
+print('Table 2 saved to table/table2.txt')

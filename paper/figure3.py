@@ -17,21 +17,25 @@ dtype = torch.cuda.FloatTensor
 filename = 'data/ACS-WFC-F606W-test.pkl'
 dset_test_EX = data(filename, field='EX')
 
-model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32',device='GPU')
+gpu_available = torch.cuda.is_available()
+if gpu_available:
+    model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32', device='GPU')
+else:
+    model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32', device='CPU')
+
+print('Creating Figure 3: example images of deepCR mask prediction in extragalactic fields.')
 
 img0=np.zeros((7*256,15*256))
 img1=np.zeros((7*256,15*256))
 mask=np.zeros((7*256,15*256))
 for i in range(105):
     img0[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = dset_test_EX[i+105][0]
-    mask_, img1_ = model.clean(dset_test_EX[i+105][0], threshold=0.7)
+    mask_, img1_ = model.clean(dset_test_EX[i+105][0], threshold=0.5)
     mask[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = mask_
     img1[i//15*256:i//15*256+256, (i-i//15*15)*256:(i-i//15*15)*256+256] = img1_
 img0=img0[:1024,-1024:]
 img1=img1[:1024,-1024:]
 mask=mask[:1024,-1024:]
-
-#mask, img1 = model.clean(img0, seg=128)
 
 plt.rcParams['figure.dpi'] = 200
 fig,ax = plt.subplots(1,2,frameon=False)
@@ -43,7 +47,7 @@ ax[1].imshow(np.log10(img1)*-1, vmin=vmax, vmax=vmin, cmap='gray')
 plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
 plt.subplots_adjust(wspace=0, hspace=0)
 plt.tight_layout()
-plt.savefig('figure/figure3a1.png', fmt='png', bbox='tight')
+plt.savefig('figure/figure3a.png', fmt='png', bbox='tight')
 
 ex_examples = []
 rows = 8
@@ -63,4 +67,6 @@ for i in range(rows):
 plt.setp(plt.gcf().get_axes(), xticks=[], yticks=[])
 plt.subplots_adjust(wspace=0.05, hspace=0.05)
 plt.tight_layout()
-plt.savefig('figure/figure3b1.png', fmt='png', bbox='tight')
+plt.savefig('figure/figure3b.png', fmt='png', bbox='tight')
+
+print('Top and bottom panel of Figure 3 saved to figure/figure3a.png and figure/figure3b.png.')

@@ -111,5 +111,5 @@ class data(Dataset):
         else:
             mask = self.crmask[i]
             badmask = self.badmask[i]
-        return (self.raw[i] + a) / 100, (self.clean[i] + a) / 100, mask, badmask, self.exp[i], \
+        return self.raw[i] + a, self.clean[i] + a, mask, badmask, self.exp[i], \
                self.gain[i]

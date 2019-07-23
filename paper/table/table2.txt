@@ -1,0 +1,22 @@
+\begin{table*}[t]
+ \label{table:mask}
+ \caption{}
+ \centering
+  \begin{tabular}{*{6}{c}} 
+ \toprule 
+          & extragalactic field & globular cluster & resolved galaxy & \multicolumn{2}{c}{runtime}   \\
+        Model &TPR (0.05\%)& TPR (0.05\%)& TPR (0.05\%)& CPU & GPU \\
+ \midrule
+deepCR-2-4 &82.0\% (94.5\%) &83.9\% (97.3\%) &56.2\% (80.4\%) &\textbf{1.4s} &\textbf{0.1s}\\
+deepCR-2-32 &\textbf{88.5\%} (95.8\%) &\textbf{93.3\%} (98.1\%)&\textbf{75.2\%} (88.8\%)&7.9s &0.2s\\
+\LACosmic &57.3\% (92.6\%) &58.3\% (93.7\%) &33.8\% (67.9\%) &9.0s & n/a\\
+ \midrule 
+ \midrule 
+ &TPR (0.5\%)& TPR (0.5\%)& TPR (0.5\%) \\
+ \midrule 
+deepCR-2-4 &94.0\% (96.9\%) &96.2\% (98.7\%) &80.6\% (89.7\%) &\\
+deepCR-2-32 &\textbf{98.7\%} (99.2\%) &\textbf{99.5\%} (99.7\%)&\textbf{91.2\%} (93.7\%)&\\
+\LACosmic &69.5\% (95.4\%) &73.9\% (95.2\%) &53.4\% (77.4\%) &\\
+\bottomrule 
+ \end{tabular}
+\end{table*}
