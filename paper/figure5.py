@@ -1,6 +1,5 @@
-import sys
-sys.path.append("../deepCR")
-
+import warnings
+warnings.filterwarnings("ignore")
 import torch
 from torch import from_numpy
 from torch.utils.data import DataLoader
@@ -12,7 +11,7 @@ import numpy.ma as ma
 import astroscrappy.astroscrappy as lac
 from deepCR import deepCR
 from data import data
-print('Generating Figure 5: CR mask comparison.')
+print('Generating Figure 5: CR mask comparison in resolved galaxy images.')
 
 dtype = torch.cuda.FloatTensor # GPU training
 filename = 'data/ACS-WFC-F606W-test.pkl'
@@ -26,8 +25,8 @@ else:
 
 plt.rcParams['figure.dpi'] = 200
 
-fig, ax = plt.subplots(rows, 4, sharex=True, sharey=True)
-fig.set_size_inches(15 / 1.2 / 6.2 * 4, rows * 2.5 / 1.2)
+fig, ax = plt.subplots(3, 4, sharex=True, sharey=True)
+fig.set_size_inches(15 / 1.2 / 6.2 * 4, 3 * 2.5 / 1.2)
 plt.subplots_adjust(wspace=0, hspace=0)
 
 idx = [1, 3, 3]
@@ -40,7 +39,7 @@ for i in range(3):
 
     mask_deepcr, inpaint_deepcr = model.clean(img0, threshold=0.5)
     mask_deepcr = mask_deepcr.astype(bool)
-    mask_lacosmic, _ = lac.detect_cosmics(img0 * 100, objlim=5, sigclip=11,
+    mask_lacosmic, _ = lac.detect_cosmics(img0, objlim=5, sigclip=11,
                                            sigfrac=0.3, gain=1, readnoise=5, satlevel=np.inf,
                                            sepmed=False, cleantype='medmask', niter=4)
     

@@ -1,5 +1,3 @@
-import sys
-sys.path.append("../deepCR")
 import torch
 from torch import from_numpy
 from skimage.restoration import inpaint_biharmonic
@@ -15,12 +13,14 @@ import os
 
 gpu_available = torch.cuda.is_available()
 if not gpu_available:
+    print('-----------------------------------------------------')
     print('Warning: GPU not detected on your device.')
     print('It is fine if you are generating figures and tables')
     print('    from the pre-computed data in the *.npy files')
     print('Otherwise, deepCR benchmark takes very long to run on CPU.')
     print('We recommend that you abort and switch to device with GPU,')
     print('    if you would like to run the benchmarks from stretch.')
+    print('-----------------------------------------------------')
 
 # Change the number of GPU used as you wish
 #os.environ['CUDA_VISIBLE_DEVICES']="1"
@@ -124,7 +124,7 @@ else:
     np.save('inpaint_non_neural.npy', results)
     print('non neural metrics saved to inpaint_non_neural.npy')
 
-if os.path.isfile('inpaint_deepCR_.npy'):
+if os.path.isfile('inpaint_deepCR.npy'):
     print('deepCR metrics loaded from inpaint_deepCR.npy')
     np_load_old = np.load
     np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
@@ -165,7 +165,7 @@ else:
     deep4_gal = np.array(deep4_gal).reshape(-1)
     deep4_gc = np.array(deep4_gc).reshape(-1)
     results = np.array([deep_ex, deep_gal, deep_gc, deep4_ex, deep4_gal, deep4_gc])
-    np.save('inpaint_deepCR_.npy', results)
+    np.save('inpaint_deepCR.npy', results)
     print('deepCR metrics saved to inpaint_deepCR.npy')
 
 np.random.seed(0)

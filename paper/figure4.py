@@ -1,7 +1,5 @@
-import sys
-sys.path.append("../deepCR")
 import os
-# Change the number of GPU used as you wish
+# Change the number of GPU in use as you wish
 #os.environ['CUDA_VISIBLE_DEVICES']="1"
 import time
 import torch
@@ -21,13 +19,14 @@ print('Creating Figure 4: ROC curves')
 
 gpu_available = torch.cuda.is_available()
 if not gpu_available:
-    print('')
+    print('-----------------------------------------------------')
     print('Warning: GPU not detected on your device.')
     print('It is fine if you are generating figures and tables')
     print('    from the pre-computed data in the *.npy files')
     print('Otherwise, deepCR benchmark takes very long to run on CPU.')
     print('We recommend that you abort and switch to device with GPU,')
     print('    if you would like to run the benchmarks from stretch.')
+    print('-----------------------------------------------------')
 
 # load test data
 filename = 'data/ACS-WFC-F606W-test.pkl'
@@ -71,7 +70,7 @@ else:
     np.save('ROC_LACosmic.npy', np.array(save))
     print('saved to ROC_LACosmic.npy')
 
-if os.path.isfile('ROC_deepCR_.npy'):
+if os.path.isfile('ROC_deepCR.npy'):
     save = np.load('ROC_deepCR.npy')
     TPR_EX = save[0]
     FPR_EX = save[1]
@@ -224,7 +223,7 @@ for i in range(500):
 deepCR4_CPU = (time.time()-t0)/5
 t0= time.time()
 for i in range(500):
-    a = lac.detect_cosmics(dset_test_EX[0][0]*100, objlim=5, sigclip=2,
+    a = lac.detect_cosmics(dset_test_EX[0][0], objlim=5, sigclip=2,
                    sigfrac=0.3, gain=1, readnoise=5, satlevel = np.inf,
                    sepmed=False, cleantype='medmask', niter=4)
 LACosmic_CPU = (time.time()-t0)/5
@@ -284,7 +283,6 @@ table2.append(ans)
 
 
 table2.append('\\bottomrule \n \\end{tabular}\n\\end{table*}')
-print('saved')
 with open("table/table2.txt", "w") as file:
     for line in table2:
         file.write(line)

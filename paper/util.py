@@ -51,7 +51,7 @@ def ROC_LACosmic(dset, sigclip, objlim=2, limit=1e5, dilate=None):
         image = dset[t]
         msk = image[2]
         for i in range(nROC):
-            pdt_mask, cleanArr = lac.detect_cosmics(image[0] * 100, sigclip=sigclip[i], sigfrac=0.3, objlim=objlim,
+            pdt_mask, cleanArr = lac.detect_cosmics(image[0], sigclip=sigclip[i], sigfrac=0.3, objlim=objlim,
                                                     gain=1, readnoise=5, satlevel=np.inf, sepmed=False,
                                                     cleantype='medmask', niter=4)
             pdt_mask *= (1 - image[3]).astype(bool)

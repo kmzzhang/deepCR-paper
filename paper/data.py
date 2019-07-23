@@ -1,6 +1,5 @@
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from torchvision import transforms
 import numpy as np
 import pickle
 

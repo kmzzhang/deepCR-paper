@@ -1,6 +1,5 @@
-import sys
-sys.path.append("../deepCR")
-
+import warnings
+warnings.filterwarnings("ignore")
 import torch
 from torch import from_numpy
 from torch.utils.data import DataLoader
@@ -13,6 +12,7 @@ import astroscrappy.astroscrappy as lac
 from deepCR import deepCR
 from data import data
 
+print('Creating Figure 3: deepCR examples in extragalactic field')
 dtype = torch.cuda.FloatTensor
 filename = 'data/ACS-WFC-F606W-test.pkl'
 dset_test_EX = data(filename, field='EX')
@@ -22,8 +22,6 @@ if gpu_available:
     model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32', device='GPU')
 else:
     model = deepCR(mask='ACS-WFC-F606W-2-32', inpaint='ACS-WFC-F606W-3-32', device='CPU')
-
-print('Creating Figure 3: example images of deepCR mask prediction in extragalactic fields.')
 
 img0=np.zeros((7*256,15*256))
 img1=np.zeros((7*256,15*256))
@@ -69,4 +67,4 @@ plt.subplots_adjust(wspace=0.05, hspace=0.05)
 plt.tight_layout()
 plt.savefig('figure/figure3b.png', fmt='png', bbox='tight')
 
-print('Top and bottom panel of Figure 3 saved to figure/figure3a.png and figure/figure3b.png.')
+print('Figure 3 saved to figure/figure3a.png and figure/figure3b.png.')

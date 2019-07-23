@@ -1,13 +1,9 @@
-import sys
-sys.path.append("../deepCR")
-
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from deepCR import deepCR
 
 print('Generating Figure 6: convolution kernels')
-
 model = deepCR(mask='example_model', device='CPU')
 
 for param in model.maskNet.parameters():
