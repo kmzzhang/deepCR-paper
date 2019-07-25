@@ -21,17 +21,3 @@ Figures and tables are by default generated from pre-calculated benchmarking dat
 If you would like to reproduce benchmarking results from scratch, simply delete these *.npy files.
 
 Warning: it is highly recommended that benchmarking be run on GPU(s). On CPUs they're expected to run for hours.
-
-### to adapt deepCR for your own use
-
-Please refer to https://github.com/profjsb/deepCR
-
-Example usage:
-
-```python
-from deepCR import deepCR
-mdl = deepCR(mask="ACS-WFC-F606W-2-32",
-	     inpaint="ACS-WFC-F606W-2-32",
-             device="GPU")
-mask, cleaned_image = mdl.clean(image, threshold = 0.5)
-```
